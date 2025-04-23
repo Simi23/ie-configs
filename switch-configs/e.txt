@@ -1,0 +1,84 @@
+!!!! BASIC
+
+hostname IE3-E
+clock timezone CET 1 0
+clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00
+no ip domain lookup
+no ip routing
+ip domain name pg-lan.hu
+line con 0
+ exec-timeout 0 0
+ privilege level 15
+ logging synchronous
+ exit
+line vty 0 7
+  login local
+  logging synchronous
+  exit
+username infosokejszakaja privilege 15 secret ********
+ntp server 10.23.3.254
+
+!!! CRYPTO
+
+crypto key generate rsa general-keys modulus 2048
+ip ssh version 2
+
+!!!! VLANS
+
+vlan 1
+  name SULI
+vlan 23
+  name INFOSOK-EJSZAKAJA
+
+!!!! INTERFACES
+
+interface Vlan23
+  ip address 10.23.3.225 255.255.252.0
+  no shutdown
+
+interface range TenGigabitEthernet1/0/1-23
+ description **ACCESS PORT**
+ switchport mode access
+ switchport access vlan 23
+ switchport nonegotiate
+ ip dhcp snooping limit rate 4
+!
+interface TenGigabitEthernet1/0/24
+ description **WIFI PORT**
+ switchport mode access
+ switchport access vlan 1
+ switchport nonegotiate
+!
+interface range TenGigabitEthernet1/1/1-2
+ description **TRUNK PORT**
+ switchport mode trunk
+ switchport trunk allowed vlan 1,23
+ ip arp inspection trust
+ ip dhcp snooping trust
+!
+interface range TenGigabitEthernet1/1/3-4
+ shutdown
+!
+ip default-gateway 10.23.3.254
+!
+spanning-tree mode rapid-pvst
+spanning-tree vlan 1,23
+!
+spanning-tree portfast default
+spanning-tree portfast bpduguard default
+!
+ip dhcp snooping vlan 23
+no ip dhcp snooping information option
+ip dhcp snooping
+!
+snmp-server group IE3 v3 priv
+snmp-server user IE3-USER IE3 v3 auth md5 ******** priv aes 128 ********
+!
+logging origin-id hostname
+logging host 10.23.3.252
+logging source-interface Vlan23
+logging trap info
+!
+
+
+
