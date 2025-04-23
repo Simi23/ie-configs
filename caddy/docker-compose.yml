@@ -1,0 +1,27 @@
+services:
+  caddy:
+    image: pg/custom-caddy
+    restart: always
+    pull_policy: never
+    build:
+      context: .
+      dockerfile: Dockerfile-Custom-Caddy
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - /opt/caddy/Caddyfile:/etc/caddy/Caddyfile
+    ports:
+      - 80:80
+      - 443:443
+      - 443:443/udp
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    name: proxy
+    external: true

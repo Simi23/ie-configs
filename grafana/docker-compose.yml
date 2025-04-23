@@ -1,0 +1,79 @@
+services:
+  # The Grafana dashboarding server.
+  grafana:
+    image: grafana/grafana-oss:latest
+    restart: unless-stopped
+    container_name: grafana
+    environment:
+      - GF_SERVER_ROOT_URL=${ROOT_URL}
+    volumes:
+      - grafana_config:/etc/grafana
+      - grafana_data:/var/lib/grafana
+      - grafana_log:/var/log/grafana
+    networks:
+     - default
+     - proxy
+
+  # The Loki service stores logs sent to it, and takes queries from Grafana
+  # to visualise those logs.
+  loki:
+    image: grafana/loki:latest
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yaml"]
+    ports:
+      - "3100:3100"
+    volumes:
+      - "./loki/loki.yaml:/etc/loki/loki.yaml"
+      - loki_data:/loki
+
+  # Promtail collects logs from syslog and sends them to Loki
+  promtail:
+    image: grafana/promtail:latest
+    restart: unless-stopped
+    volumes:
+      - promtail_log:/var/log
+      - promtail_positions:/promtail_positions
+      - ./promtail/promtail.yaml:/etc/promtail/config.yml
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  syslogng:
+    image: linuxserver/syslog-ng:latest
+    restart: unless-stopped
+    ports:
+      - 514:5514/udp
+      - 601:6601
+    volumes:
+      - ./syslog-ng:/config
+      - syslogng_logs:/var/log
+
+  questdb:
+    image: questdb/questdb:8.2.3
+    restart: unless-stopped
+    hostname: questdb
+    container_name: questdb
+    ports:
+      - 9000:9000
+      - 9009:9009
+    volumes:
+      - questdb_data:/var/lib/questdb
+
+volumes:
+  grafana_config:
+  grafana_data:
+  grafana_log:
+  loki_data:
+  promtail_log:
+  promtail_positions:
+  syslogng_logs:
+  questdb_data:
+
+networks:
+  default:
+    name: grafana_backend
+  proxy:
+    name: proxy
+    external: true
